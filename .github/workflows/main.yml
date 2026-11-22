@@ -318,7 +318,10 @@ jobs:
       - name: Compile
         shell: bash
         run: |
-          haxelib run lime build project.xml android \
+          # hxcpp 4.3.2 guesses the NDK host dir as "linux-x86" and misses the real
+          # toolchains/llvm/prebuilt/linux-x86_64 bin, falling back to the runner's system
+          # clang, which has no Android C++ headers ("typeinfo file not found").
+          haxelib run lime build project.xml android -DANDROID_HOST=linux-x86_64 \
             --certificate-path=ci-keystore.jks \
             --certificate-password=limul-engine \
             --certificate-alias=limul \
