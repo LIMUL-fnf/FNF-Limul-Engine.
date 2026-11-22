@@ -86,13 +86,24 @@ jobs:
         run: |
           f=build.log; [ -f "$f" ] || f=install-haxelib.log
           { echo "### $f (tail)"; echo '```'; tail -n 120 "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          # hxcpp's "Compiling group" listing includes file names like Error.cpp that match a
-          # naive grep; drop that noise and always append the log tail so the real failure
-          # reaches one annotation instead of being crowded out.
-          hits=$(grep -E "error:|Error:|fatal error|undefined reference|Could not|Exception|Invalid|not found|FAILED" "$f" | grep -vE "^ - |\[haxe,release\]" | head -n 6 || true)
-          msg=$( { printf '%s\n' "$hits"; echo '--- tail ---'; tail -n 8 "$f"; } | tr '\n' '~' )
-          msg=$(printf '%s' "$msg" | sed 's/%/%25/g' | cut -c1-6000)
-          printf '::error::%s\n' "$msg"
+          # hxcpp's "Compiling group" listing includes file names like Error.cpp, and its
+          # linker command line embeds those names in one huge line; both flood a naive
+          # grep. GitHub truncates each annotation at 4 KB, so emit the tail in chunks.
+          hits=$(grep -E "error:|Error:|fatal error|undefined reference|Could not|Exception|Invalid|not found|FAILED" "$f" | grep -vE "^ - |\[haxe,release\]" | awk 'length($0)<=400' | head -n 5 | tr '\n' '~' || true)
+          if [ -n "$hits" ]; then
+            msg=$(printf '%s' "$hits" | sed 's/%/%25/g' | cut -c1-3800)
+            printf '::error::HITS: %s\n' "$msg"
+          fi
+          tail -n 120 "$f" | awk '
+            BEGIN { part=1; buf="" }
+            {
+              line=substr($0,1,400); gsub(/\r/,"",line); gsub(/%/,"%25",line);
+              if (length(buf)+length(line)+1 > 3800) {
+                printf "::error::LOG %d: %s\n", part, buf; part++; buf=""
+              }
+              buf = buf (buf==""?"":"~") line
+            }
+            END { if (buf!="") printf "::error::LOG %d: %s\n", part, buf }'
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v4
@@ -160,12 +171,22 @@ jobs:
           Get-Content $f -Tail 120 | Add-Content $env:GITHUB_STEP_SUMMARY
           Add-Content $env:GITHUB_STEP_SUMMARY '```'
           $lines = Select-String -Path $f -Pattern 'error:|Error:|fatal error|undefined reference|Could not|Exception|Invalid|not found|FAILED' |
-            Where-Object { $_.Line -notmatch '^\s*- ' -and $_.Line -notmatch '\[haxe,release\]' } |
-            Select-Object -First 6 | ForEach-Object { $_.Line }
-          $msg = (@($lines) + @('--- tail ---') + @(Get-Content $f -Tail 8)) -join '~'
-          if ($msg.Length -gt 6000) { $msg = $msg.Substring(0, 6000) }
-          $msg = $msg -replace '%', '%25'
-          Write-Output "::error::$msg"
+            Where-Object { $_.Line -notmatch '^\s*- ' -and $_.Line -notmatch '\[haxe,release\]' -and $_.Line.Length -le 400 } |
+            Select-Object -First 5 | ForEach-Object { $_.Line }
+          if ($lines) {
+            $msg = ($lines -join '~') -replace '%', '%25'
+            if ($msg.Length -gt 3800) { $msg = $msg.Substring(0, 3800) }
+            Write-Output "::error::HITS: $msg"
+          }
+          $tail = Get-Content $f -Tail 120 | ForEach-Object { if ($_.Length -gt 400) { $_.Substring(0, 400) } else { $_ } }
+          $part = 1; $buf = @()
+          foreach ($line in $tail) {
+            if ((((@($buf) + @($line)) -join '~').Length) -gt 3800) {
+              Write-Output ("::error::LOG {0}: {1}" -f $part, ((@($buf) -join '~') -replace '%', '%25'))
+              $part++; $buf = @($line)
+            } else { $buf = @($buf) + @($line) }
+          }
+          if ($buf.Count -gt 0) { Write-Output ("::error::LOG {0}: {1}" -f $part, ((@($buf) -join '~') -replace '%', '%25')) }
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v4
@@ -249,13 +270,24 @@ jobs:
         run: |
           f=build.log; [ -f "$f" ] || f=install-haxelib.log
           { echo "### $f (tail)"; echo '```'; tail -n 120 "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          # hxcpp's "Compiling group" listing includes file names like Error.cpp that match a
-          # naive grep; drop that noise and always append the log tail so the real failure
-          # reaches one annotation instead of being crowded out.
-          hits=$(grep -E "error:|Error:|fatal error|undefined reference|Could not|Exception|Invalid|not found|FAILED" "$f" | grep -vE "^ - |\[haxe,release\]" | head -n 6 || true)
-          msg=$( { printf '%s\n' "$hits"; echo '--- tail ---'; tail -n 8 "$f"; } | tr '\n' '~' )
-          msg=$(printf '%s' "$msg" | sed 's/%/%25/g' | cut -c1-6000)
-          printf '::error::%s\n' "$msg"
+          # hxcpp's "Compiling group" listing includes file names like Error.cpp, and its
+          # linker command line embeds those names in one huge line; both flood a naive
+          # grep. GitHub truncates each annotation at 4 KB, so emit the tail in chunks.
+          hits=$(grep -E "error:|Error:|fatal error|undefined reference|Could not|Exception|Invalid|not found|FAILED" "$f" | grep -vE "^ - |\[haxe,release\]" | awk 'length($0)<=400' | head -n 5 | tr '\n' '~' || true)
+          if [ -n "$hits" ]; then
+            msg=$(printf '%s' "$hits" | sed 's/%/%25/g' | cut -c1-3800)
+            printf '::error::HITS: %s\n' "$msg"
+          fi
+          tail -n 120 "$f" | awk '
+            BEGIN { part=1; buf="" }
+            {
+              line=substr($0,1,400); gsub(/\r/,"",line); gsub(/%/,"%25",line);
+              if (length(buf)+length(line)+1 > 3800) {
+                printf "::error::LOG %d: %s\n", part, buf; part++; buf=""
+              }
+              buf = buf (buf==""?"":"~") line
+            }
+            END { if (buf!="") printf "::error::LOG %d: %s\n", part, buf }'
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v4
@@ -344,13 +376,24 @@ jobs:
         run: |
           f=build.log; [ -f "$f" ] || f=install-haxelib.log
           { echo "### $f (tail)"; echo '```'; tail -n 120 "$f"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          # hxcpp's "Compiling group" listing includes file names like Error.cpp that match a
-          # naive grep; drop that noise and always append the log tail so the real failure
-          # reaches one annotation instead of being crowded out.
-          hits=$(grep -E "error:|Error:|fatal error|undefined reference|Could not|Exception|Invalid|not found|FAILED" "$f" | grep -vE "^ - |\[haxe,release\]" | head -n 6 || true)
-          msg=$( { printf '%s\n' "$hits"; echo '--- tail ---'; tail -n 8 "$f"; } | tr '\n' '~' )
-          msg=$(printf '%s' "$msg" | sed 's/%/%25/g' | cut -c1-6000)
-          printf '::error::%s\n' "$msg"
+          # hxcpp's "Compiling group" listing includes file names like Error.cpp, and its
+          # linker command line embeds those names in one huge line; both flood a naive
+          # grep. GitHub truncates each annotation at 4 KB, so emit the tail in chunks.
+          hits=$(grep -E "error:|Error:|fatal error|undefined reference|Could not|Exception|Invalid|not found|FAILED" "$f" | grep -vE "^ - |\[haxe,release\]" | awk 'length($0)<=400' | head -n 5 | tr '\n' '~' || true)
+          if [ -n "$hits" ]; then
+            msg=$(printf '%s' "$hits" | sed 's/%/%25/g' | cut -c1-3800)
+            printf '::error::HITS: %s\n' "$msg"
+          fi
+          tail -n 120 "$f" | awk '
+            BEGIN { part=1; buf="" }
+            {
+              line=substr($0,1,400); gsub(/\r/,"",line); gsub(/%/,"%25",line);
+              if (length(buf)+length(line)+1 > 3800) {
+                printf "::error::LOG %d: %s\n", part, buf; part++; buf=""
+              }
+              buf = buf (buf==""?"":"~") line
+            }
+            END { if (buf!="") printf "::error::LOG %d: %s\n", part, buf }'
 
       - name: Publish Artifact
         uses: actions/upload-artifact@v4
