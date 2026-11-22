@@ -26,6 +26,23 @@ class MusicBeatSubstate extends FlxSubState
 	inline function get_controls():Controls
 		return PlayerSettings.player1.controls;
 
+	#if mobile
+	private var mobileMenu:mobile.MobileMenuControls;
+
+	override function create()
+	{
+		super.create();
+		if (!ClientPrefs.touchControls || Std.isOfType(this, CustomFadeTransition)) return;
+
+		mobileMenu = new mobile.MobileMenuControls(PlayerSettings.player1.controls);
+		add(mobileMenu);
+		subStateOpened.add(function(_)
+		{
+			if (mobileMenu != null) mobileMenu.releaseAll();
+		});
+	}
+	#end
+
 	override function update(elapsed:Float)
 	{
 		//everyStep();

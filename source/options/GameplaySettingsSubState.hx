@@ -46,6 +46,15 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			false);
 		addOption(option);
 
+		#if mobile
+		var option:Option = new Option('Touch Controls',
+			"If checked, tap and hold anywhere on the four lanes\nto play notes, V-Slice style.",
+			'touchControls',
+			'bool',
+			true);
+		addOption(option);
+		#end
+
 		//I'd suggest using "Downscroll" as an example for making your own option since it is the simplest here
 		var option:Option = new Option('Downscroll', //Name
 			'If checked, notes go Down instead of Up, simple enough.', //Description

@@ -1655,7 +1655,10 @@ class PlayState extends MusicBeatState
 		// scoreTxt rides on healthBarBG and the strumline starts at STRUM_X = 200), so it
 		// works for up- and downscroll alike. It follows hideHud and disappears with
 		// camHUD during cutscenes and dialogues.
-		var diffName:String = storyDifficultyText;
+		var diffName:String = null;
+		#if desktop
+		diffName = storyDifficultyText;
+		#end
 		// LIMUL-104-DIFF-NAME: belt and braces for the strip - if the difficulty ever arrives empty,
 		// ask CoolUtil for the name instead of printing "song |  | L.E 1.0.0".
 		if (diffName == null || diffName.length < 1)
@@ -2015,15 +2018,20 @@ class PlayState extends MusicBeatState
 			return true;
 		}
 
-		var foldersToCheck:Array<String> = [Paths.mods('shaders/')];
+		var foldersToCheck:Array<String> = [];
+		#if MODS_ALLOWED
+		foldersToCheck.push(Paths.mods('shaders/'));
+		#end
 		// Limul Engine: also search the asset tree (assets/shaders/), so engine-shipped
 		// shaders like the Weekend 1 rain live with the rest of the content, not in mods/.
 		foldersToCheck.push(Paths.getPreloadPath('shaders/'));
+		#if MODS_ALLOWED
 		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
 			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/shaders/'));
 
 		for(mod in Paths.getGlobalMods())
 			foldersToCheck.insert(0, Paths.mods(mod + '/shaders/'));
+		#end
 		
 		for (folder in foldersToCheck)
 		{
@@ -2752,6 +2760,9 @@ class PlayState extends MusicBeatState
 
 			generateStaticArrows(0);
 			generateStaticArrows(1);
+			#if mobile
+			setupTouchControls();
+			#end
 			for (i in 0...playerStrums.length) {
 				setOnLuas('defaultPlayerStrumX' + i, playerStrums.members[i].x);
 				setOnLuas('defaultPlayerStrumY' + i, playerStrums.members[i].y);
@@ -5525,82 +5536,89 @@ class PlayState extends MusicBeatState
 		}
 
 		if (!cpuControlled && startedCountdown && !paused && key > -1 && (FlxG.keys.checkStatus(eventKey, JUST_PRESSED) || ClientPrefs.controllerMode))
-		{
-			if(!boyfriend.stunned && generatedMusic && !endingSong)
-			{
-				//more accurate hit time for the ratings?
-				var lastTime:Float = Conductor.songPosition;
-				Conductor.songPosition = FlxG.sound.music.time;
-
-				var canMiss:Bool = !ClientPrefs.ghostTapping;
-
-				// heavily based on my own code LOL if it aint broke dont fix it
-				var pressNotes:Array<Note> = [];
-				//var notesDatas:Array<Int> = [];
-				var notesStopped:Bool = false;
-
-				var sortedNotesList:Array<Note> = [];
-				notes.forEachAlive(function(daNote:Note)
-				{
-					if (strumsBlocked[daNote.noteData] != true && daNote.canBeHit && daNote.mustPress && !daNote.tooLate && !daNote.wasGoodHit && !daNote.isSustainNote && !daNote.blockHit)
-					{
-						if(daNote.noteData == key)
-						{
-							sortedNotesList.push(daNote);
-							//notesDatas.push(daNote.noteData);
-						}
-						canMiss = true;
-					}
-				});
-				sortedNotesList.sort(sortHitNotes);
-
-				if (sortedNotesList.length > 0) {
-					for (epicNote in sortedNotesList)
-					{
-						for (doubleNote in pressNotes) {
-							if (Math.abs(doubleNote.strumTime - epicNote.strumTime) < 1) {
-								doubleNote.kill();
-								removeActiveNote(doubleNote);
-								doubleNote.destroy();
-							} else
-								notesStopped = true;
-						}
-
-						// eee jack detection before was not super good
-						if (!notesStopped) {
-							goodNoteHit(epicNote);
-							pressNotes.push(epicNote);
-						}
-
-					}
-				}
-				else{
-					callOnLuas('onGhostTap', [key]);
-					if (canMiss) {
-						noteMissPress(key);
-					}
-				}
-
-				// I dunno what you need this for but here you go
-				//									- Shubs
-
-				// Shubs, this is for the "Just the Two of Us" achievement lol
-				//									- Shadow Mario
-				keysPressed[key] = true;
-
-				//more accurate hit time for the ratings? part 2 (Now that the calculations are done, go back to the time it was before for not causing a note stutter)
-				Conductor.songPosition = lastTime;
-			}
-
-			var spr:StrumNote = playerStrums.members[key];
-			if(strumsBlocked[key] != true && spr != null && spr.animation.curAnim.name != 'confirm')
-			{
-				spr.playAnim('pressed');
-				spr.resetAnim = 0;
-			}
-			callOnLuas('onKeyPress', [key]);
-		}
+			laneKeyPress(key);
 		//trace('pressed: ' + controlArray);
+	}
+
+	// Lane press logic shared by the keyboard listener and the mobile touch controls; callers
+	// keep the original cpuControlled / startedCountdown / paused / key-range gate.
+	public function laneKeyPress(key:Int):Void
+	{
+		if (key < 0 || key >= keysArray.length) return;
+
+		if(!boyfriend.stunned && generatedMusic && !endingSong)
+		{
+			//more accurate hit time for the ratings?
+			var lastTime:Float = Conductor.songPosition;
+			Conductor.songPosition = FlxG.sound.music.time;
+
+			var canMiss:Bool = !ClientPrefs.ghostTapping;
+
+			// heavily based on my own code LOL if it aint broke dont fix it
+			var pressNotes:Array<Note> = [];
+			//var notesDatas:Array<Int> = [];
+			var notesStopped:Bool = false;
+
+			var sortedNotesList:Array<Note> = [];
+			notes.forEachAlive(function(daNote:Note)
+			{
+				if (strumsBlocked[daNote.noteData] != true && daNote.canBeHit && daNote.mustPress && !daNote.tooLate && !daNote.wasGoodHit && !daNote.isSustainNote && !daNote.blockHit)
+				{
+					if(daNote.noteData == key)
+					{
+						sortedNotesList.push(daNote);
+						//notesDatas.push(daNote.noteData);
+					}
+					canMiss = true;
+				}
+			});
+			sortedNotesList.sort(sortHitNotes);
+
+			if (sortedNotesList.length > 0) {
+				for (epicNote in sortedNotesList)
+				{
+					for (doubleNote in pressNotes) {
+						if (Math.abs(doubleNote.strumTime - epicNote.strumTime) < 1) {
+							doubleNote.kill();
+							removeActiveNote(doubleNote);
+							doubleNote.destroy();
+						} else
+							notesStopped = true;
+					}
+
+					// eee jack detection before was not super good
+					if (!notesStopped) {
+						goodNoteHit(epicNote);
+						pressNotes.push(epicNote);
+					}
+
+				}
+			}
+			else{
+				callOnLuas('onGhostTap', [key]);
+				if (canMiss) {
+					noteMissPress(key);
+				}
+			}
+
+			// I dunno what you need this for but here you go
+			//									- Shubs
+
+			// Shubs, this is for the "Just the Two of Us" achievement lol
+			//									- Shadow Mario
+			keysPressed[key] = true;
+
+			//more accurate hit time for the ratings? part 2 (Now that the calculations are done, go back to the time it was before for not causing a note stutter)
+			Conductor.songPosition = lastTime;
+		}
+
+		var spr:StrumNote = playerStrums.members[key];
+		if(strumsBlocked[key] != true && spr != null && (spr.animation.curAnim == null || spr.animation.curAnim.name != 'confirm'))
+		{
+			spr.playAnim('pressed');
+			spr.resetAnim = 0;
+		}
+		callOnLuas('onKeyPress', [key]);
 	}
 
 	function sortHitNotes(a:Note, b:Note):Int
@@ -5618,17 +5636,54 @@ class PlayState extends MusicBeatState
 		var eventKey:FlxKey = event.keyCode;
 		var key:Int = getKeyFromEvent(eventKey);
 		if(!cpuControlled && startedCountdown && !paused && key > -1)
-		{
-			var spr:StrumNote = playerStrums.members[key];
-			if(spr != null)
-			{
-				spr.playAnim('static');
-				spr.resetAnim = 0;
-			}
-			callOnLuas('onKeyRelease', [key]);
-		}
+			laneKeyRelease(key);
 		//trace('released: ' + controlArray);
 	}
+
+	public function laneKeyRelease(key:Int):Void
+	{
+		if (key < 0 || key >= keysArray.length) return;
+
+		var spr:StrumNote = playerStrums.members[key];
+		if(spr != null)
+		{
+			spr.playAnim('static');
+			spr.resetAnim = 0;
+		}
+		callOnLuas('onKeyRelease', [key]);
+	}
+
+	public function touchPressLane(key:Int):Void
+	{
+		if (!cpuControlled && startedCountdown && !paused && key > -1)
+			laneKeyPress(key);
+	}
+
+	public function touchReleaseLane(key:Int):Void
+	{
+		if (!cpuControlled && startedCountdown && !paused && key > -1)
+			laneKeyRelease(key);
+	}
+
+	public function touchPause():Void
+	{
+		if (startedCountdown && canPause && !paused)
+			openPauseMenu();
+	}
+
+	#if mobile
+	public var touchControls:mobile.TouchControls;
+
+	private function setupTouchControls():Void
+	{
+		if (!ClientPrefs.touchControls || touchControls != null) return;
+
+		touchControls = new mobile.TouchControls(this, camHUD);
+		insert(0, touchControls);
+		for (i in 0...touchControls.buttons.length)
+			controls.addTouchInput(this, i, touchControls.buttons[i]);
+	}
+	#end
 
 	private function getKeyFromEvent(key:FlxKey):Int
 	{
@@ -6306,6 +6361,13 @@ class PlayState extends MusicBeatState
 			FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyPress);
 			FlxG.stage.removeEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 		}
+		#if mobile
+		if (touchControls != null)
+		{
+			controls.removeTouchInputs(this);
+			touchControls = null;
+		}
+		#end
 		if (FlxG.sound.music != null)
 			FlxG.sound.music.pitch = 1;
 		super.destroy();

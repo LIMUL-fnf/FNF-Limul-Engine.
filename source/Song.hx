@@ -432,7 +432,7 @@ class Song
 		return songJson;
 	}
 
-	#if sys
+	#if MODS_ALLOWED
 	static function findModChartWithNormalizedName(folder:String, chartName:String):String
 	{
 		var modFolders:Array<String> = [];

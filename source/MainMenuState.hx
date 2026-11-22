@@ -141,15 +141,21 @@ class MainMenuState extends MusicBeatState
 
 		FlxG.camera.follow(camFollowPos, null, 1);
 
-		var versionShit:FlxText = new FlxText(12, FlxG.height - 64, 0, "Limul Engine 1.0.0", 12);
+		// The bottom-left corner belongs to the on-screen menu pad on phones and tablets.
+		#if mobile
+		var versionBaseY:Float = FlxG.height - 244;
+		#else
+		var versionBaseY:Float = FlxG.height - 64;
+		#end
+		var versionShit:FlxText = new FlxText(12, versionBaseY, 0, "Limul Engine 1.0.1", 12);
 		versionShit.scrollFactor.set();
 		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(versionShit);
-		var psychVersion:FlxText = new FlxText(12, FlxG.height - 44, 0, "Psych Engine v" + psychEngineVersion, 12);
+		var psychVersion:FlxText = new FlxText(12, versionBaseY + 20, 0, "Psych Engine v" + psychEngineVersion, 12);
 		psychVersion.scrollFactor.set();
 		psychVersion.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(psychVersion);
-		var fnfVersion:FlxText = new FlxText(12, FlxG.height - 24, 0, "Friday Night Funkin' 0.2.8", 12);
+		var fnfVersion:FlxText = new FlxText(12, versionBaseY + 40, 0, "Friday Night Funkin' 0.2.8", 12);
 		fnfVersion.scrollFactor.set();
 		fnfVersion.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(fnfVersion);

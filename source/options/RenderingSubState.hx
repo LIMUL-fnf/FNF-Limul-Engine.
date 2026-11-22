@@ -39,7 +39,7 @@ class RenderingSubState extends BaseOptionsMenu
 			"If checked, allows the GPU to be used for caching textures, decreasing RAM usage.\nDon't turn this on if you have a shitty Graphics Card.",
 			'cacheOnGPU',
 			'bool',
-			false);
+			true);
 		addOption(option);
 
 		#if !html5

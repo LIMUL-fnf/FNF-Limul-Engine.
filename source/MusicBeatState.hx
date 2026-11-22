@@ -42,7 +42,29 @@ class MusicBeatState extends FlxUIState
 			openSubState(new CustomFadeTransition(0.7, true));
 		}
 		FlxTransitionableState.skipNextTransOut = false;
+		#if mobile
+		setupMobileMenu();
+		#end
 	}
+
+	#if mobile
+	private var mobileMenu:mobile.MobileMenuControls;
+
+	// Phones have no keyboard, so menus get the on-screen pad. PlayState and the chart editor
+	// playtest have their own touch handling, so they are left alone.
+	private function setupMobileMenu():Void
+	{
+		if (!ClientPrefs.touchControls || Std.isOfType(this, PlayState) || Std.isOfType(this, editors.EditorPlayState))
+			return;
+
+		mobileMenu = new mobile.MobileMenuControls(PlayerSettings.player1.controls);
+		add(mobileMenu);
+		subStateOpened.add(function(_)
+		{
+			if (mobileMenu != null) mobileMenu.releaseAll();
+		});
+	}
+	#end
 
 	override function update(elapsed:Float)
 	{

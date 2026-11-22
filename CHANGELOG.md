@@ -4,6 +4,33 @@ All notable changes to FNF Limul Engine are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.1] - 2026-11-22
+
+Mobile/tablet release. Desktop builds keep the same save format and include the V-Sync and crash
+fixes that never shipped in a public build before.
+
+### Added
+- Android (arm64) target: landscape phones and tablets with V-Slice-style touch controls - tap and
+  hold anywhere on the four note lanes, plus an on-screen pause button.
+- On-screen menu navigation pad (left/down/up/right, back, accept) so every keyboard-driven menu
+  works on touch screens.
+- Touch Controls toggle in Options → Gameplay (on by default; desktop builds ignore it).
+- `buildAndroid` CI job that compiles, signs and uploads the release APK.
+- Custom Lime boot template that applies the V-Sync option before the window is created.
+
+### Changed
+- Engine version is now 1.0.1 in the main menu, `project.xml` and README.
+- Mobile builds ship arm64 only; mods, Lua and video cutscenes stay desktop-only (same
+  `project.xml` gates as before). Shaders keep loading from `assets/shaders/` on all platforms.
+- Main menu version text sits above the touch controls on mobile layouts.
+
+### Fixed
+- The V-Sync option was saved but never applied (Lime only reads it when the window is created);
+  the custom boot template now applies it at startup.
+- Crashing when an input press hit a strum with no animation assigned.
+- Android compilation of the mod shader lookup, mod chart finder and Freeplay BPM preview
+  (`MODS_ALLOWED` code paths that previously assumed a desktop target).
+
 ## [1.0.0] - 2026-11-17
 
 First Limul Engine release. Base: Psych Engine 0.6.3, with code and behaviour backported from

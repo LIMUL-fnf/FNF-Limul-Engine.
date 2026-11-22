@@ -2,6 +2,7 @@ package;
 
 import flixel.FlxG;
 import flixel.input.FlxInput;
+import flixel.input.IFlxInput;
 import flixel.input.actions.FlxAction;
 import flixel.input.actions.FlxActionInput;
 import flixel.input.actions.FlxActionInputDigital;
@@ -911,5 +912,61 @@ class Controls extends FlxActionSet
 	inline static function isGamepad(input:FlxActionInput, deviceID:Int)
 	{
 		return input.device == GAMEPAD && (deviceID == FlxInputDeviceID.ALL || input.deviceID == deviceID);
+	}
+
+	// On-screen buttons (mobile) feed the same actions the keyboard does, so every consumer -
+	// hold-note polling in keyShit(), menu navigation via controls.ACCEPT etc. - works without a
+	// second input path. Inputs are registered per owner; the owner must call
+	// removeTouchInputs(this) before its button objects are destroyed.
+	private var touchInputs:Array<{owner:Dynamic, action:FlxActionDigital, input:FlxActionInputDigitalIFlxInput}> = [];
+
+	public function addTouchInput(owner:Dynamic, noteIndex:Int, input:IFlxInput):Void
+	{
+		var action:FlxActionDigital = switch (noteIndex)
+		{
+			case 0: _note_left;
+			case 1: _note_down;
+			case 2: _note_up;
+			case 3: _note_right;
+			default: null;
+		}
+		if (action != null) addTouchActionInput(owner, action, input);
+	}
+
+	public function addTouchUIInput(owner:Dynamic, control:Action, input:IFlxInput):Void
+	{
+		var action:FlxActionDigital = switch (control)
+		{
+			case UI_LEFT: _ui_left;
+			case UI_DOWN: _ui_down;
+			case UI_UP: _ui_up;
+			case UI_RIGHT: _ui_right;
+			case ACCEPT: _accept;
+			case BACK: _back;
+			default: null;
+		}
+		if (action != null) addTouchActionInput(owner, action, input);
+	}
+
+	function addTouchActionInput(owner:Dynamic, action:FlxActionDigital, input:IFlxInput):Void
+	{
+		var actionInput = new FlxActionInputDigitalIFlxInput(input, PRESSED);
+		action.add(actionInput);
+		touchInputs.push({owner: owner, action: action, input: actionInput});
+	}
+
+	public function removeTouchInputs(owner:Dynamic):Void
+	{
+		var i:Int = touchInputs.length - 1;
+		while (i >= 0)
+		{
+			var entry = touchInputs[i];
+			if (entry.owner == owner)
+			{
+				entry.action.remove(entry.input, true);
+				touchInputs.splice(i, 1);
+			}
+			i--;
+		}
 	}
 }

@@ -34,6 +34,7 @@ class ClientPrefs {
 	public static var noReset:Bool = false;
 	public static var healthBarAlpha:Float = 1;
 	public static var controllerMode:Bool = false;
+	public static var touchControls:Bool = true;
 	public static var hitsoundVolume:Float = 0;
 	public static var hitsoundType:String = 'osu!mania';
 	public static var pauseMusic:String = 'Tea Time';
@@ -86,7 +87,10 @@ class ClientPrefs {
 	public static var enableGC:Bool = true;
 	public static var lessBotLag:Bool = false;
 	public static var charsAndBG:Bool = true;
-	public static var cacheOnGPU:Bool = false;
+	// LIMUL-GPU-CACHE: on by default now. Every decoded atlas (character sheets alone run past
+	// 100 MB each) used to keep a CPU-side RGBA copy for the whole session; Paths.cacheGraphicOnGPU
+	// uploads the texture and drops that copy, which is the single biggest RAM item in a song.
+	public static var cacheOnGPU:Bool = true;
 	public static var resolution:String = '1280x720';
 
 	// Game Renderer (JS Engine parity)
@@ -222,6 +226,7 @@ class ClientPrefs {
 		FlxG.save.data.safeFrames = safeFrames;
 		FlxG.save.data.gameplaySettings = gameplaySettings;
 		FlxG.save.data.controllerMode = controllerMode;
+		FlxG.save.data.touchControls = touchControls;
 		FlxG.save.data.hitsoundVolume = hitsoundVolume;
 		FlxG.save.data.hitsoundType = hitsoundType;
 		FlxG.save.data.pauseMusic = pauseMusic;
@@ -414,6 +419,9 @@ class ClientPrefs {
 		if(FlxG.save.data.controllerMode != null) {
 			controllerMode = FlxG.save.data.controllerMode;
 		}
+		if(FlxG.save.data.touchControls != null) {
+			touchControls = FlxG.save.data.touchControls;
+		}
 		if(FlxG.save.data.hitsoundVolume != null) {
 			hitsoundVolume = FlxG.save.data.hitsoundVolume;
 		}
@@ -550,6 +558,15 @@ class ClientPrefs {
 			lessBotLag = FlxG.save.data.lessBotLag;
 		if (FlxG.save.data.charsAndBG != null)
 			charsAndBG = FlxG.save.data.charsAndBG;
+		// LIMUL-GPU-CACHE: existing saves already have cacheOnGPU=false written by the first-run
+		// saveSettings(), so a plain default bump would never reach them. Flip it exactly once per
+		// save; whoever turns it back off in Options keeps it off afterwards.
+		if (FlxG.save.data.gpuCacheDefault == null)
+		{
+			FlxG.save.data.cacheOnGPU = true;
+			FlxG.save.data.gpuCacheDefault = true;
+			FlxG.save.flush();
+		}
 		if (FlxG.save.data.cacheOnGPU != null)
 			cacheOnGPU = FlxG.save.data.cacheOnGPU;
 		if (FlxG.save.data.resolution != null)

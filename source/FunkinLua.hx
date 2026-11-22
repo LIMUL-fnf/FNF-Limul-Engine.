@@ -2960,16 +2960,21 @@ class FunkinLua {
 			return true;
 		}
 
-		var foldersToCheck:Array<String> = [Paths.mods('shaders/')];
+		var foldersToCheck:Array<String> = [];
+		#if MODS_ALLOWED
+		foldersToCheck.push(Paths.mods('shaders/'));
+		#end
 		// Limul Engine: also look inside the asset tree, so a shader can ship as plain content
 		// (assets/shaders/<name>.frag) instead of only as a mod. Paths.getPreloadPath() is
 		// 'assets/' in this fork, which is where every Weekend 1 file lives.
 		foldersToCheck.push(Paths.getPreloadPath('shaders/'));
+		#if MODS_ALLOWED
 		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
 			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/shaders/'));
 
 		for(mod in Paths.getGlobalMods())
 			foldersToCheck.insert(0, Paths.mods(mod + '/shaders/'));
+		#end
 		
 		for (folder in foldersToCheck)
 		{

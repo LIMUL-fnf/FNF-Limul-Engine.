@@ -2,7 +2,7 @@
 <project>
 	<!-- _________________________ Application Settings _________________________ -->
 
-	<app title="FNF Limul Engine" file="FNFLimulEngine" packageName="com.shadowmario.psychengine" package="com.shadowmario.psychengine" main="Main" version="0.2.8" company="Limul" />
+	<app title="FNF Limul Engine" file="FNFLimulEngine" packageName="com.limul.engine" package="com.limul.engine" main="Main" version="1.0.1" company="Limul" />
 
 	<!--Switch Export with Unique ApplicationID and Icon-->
 	<set name="APP_ID" value="0x0100f6c013bbc000" />
@@ -32,6 +32,10 @@
 	<!--Mobile-specific-->
 	<window if="mobile" orientation="landscape" fullscreen="true" width="0" height="0" resizable="false"/>
 
+	<!--Android: phones and tablets are all 64-bit now, and one architecture keeps the APK
+	    (and the CI build) small. 32-bit-only devices are not supported by this build.-->
+	<architecture if="android" exclude="armv7"/>
+
 	<!--Switch-specific-->
 	<window if="switch" orientation="landscape" fullscreen="true" width="0" height="0" resizable="true" />
 
@@ -42,6 +46,10 @@
 	<set name="BUILD_DIR" value="export/32bit" if="32bits" />
 
 	<classpath name="source" />
+
+	<!-- Custom Lime boot template: reads vsync.txt (written by the V-Sync option) before the window
+	     exists, since Lime 8.3.2 has no runtime VSync setter. -->
+	<template path="lime-template" />
 	
 	<!-- PSYCH ENGINE CUSTOMIZATION -->
 	<define name="MODS_ALLOWED" if="desktop" />
